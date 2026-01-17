@@ -128,10 +128,6 @@ The system displays:
 - A small parallel corpus (5–10 sentence pairs) is sufficient for demonstration
 - BLEU score is computed using a single reference translation
 
-## Author
-
-Adithya Chakrala
-
 ## Final Status
 
 SMT implemented
