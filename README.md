@@ -19,7 +19,7 @@ The system:
 - Ensure modular and explainable implementation
 
 ## Project Structure
-
+```text
 SMT_BLEU_Project/
 │
 ├── app/
@@ -54,6 +54,7 @@ SMT_BLEU_Project/
 │
 ├── requirements.txt
 └── README.md
+```
 
 ## Dataset Description
 
