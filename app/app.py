@@ -9,10 +9,10 @@ import streamlit as st
 import sys
 from pathlib import Path
 
-# Get project root directory
+# --------------------------------------------------
+# Project Path Setup
+# --------------------------------------------------
 ROOT_DIR = Path(__file__).resolve().parents[1]
-
-# Add project root to Python path
 sys.path.insert(0, str(ROOT_DIR))
 
 from src.preprocessing.clean_text import clean_text
@@ -25,27 +25,107 @@ from src.translation.language_model import train_bigram_language_model
 from src.translation.decoder import decode_sentence
 from src.evaluation.bleu_score import compute_bleu_score
 
-
 # --------------------------------------------------
-# Streamlit Page Config
+# Page Config
 # --------------------------------------------------
 st.set_page_config(
-    page_title="SMT with BLEU Evaluation",
-    layout="centered"
-)
-
-st.title("📘 Statistical Machine Translation (SMT)")
-st.subheader("with BLEU Score Evaluation")
-
-st.markdown(
-    """
-This application translates text using a simple SMT system
-and evaluates the translation quality using BLEU score.
-"""
+    page_title="SMT Translator",
+    page_icon="🌍",
+    layout="wide"
 )
 
 # --------------------------------------------------
-# Load & Train Models (Once)
+# Custom CSS
+# --------------------------------------------------
+st.markdown(
+    """
+    <style>
+    body {
+        background-color: #f7f9fc;
+    }
+
+    .main {
+        padding: 2rem;
+    }
+
+    h1 {
+        font-weight: 800;
+        color: #1f2937;
+    }
+
+    h4 {
+        color: #6b7280;
+    }
+
+    .stButton > button {
+        background-color: #2563eb;
+        color: white;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
+        border: none;
+    }
+
+    .stButton > button:hover {
+        background-color: #1d4ed8;
+    }
+
+    .metric-box {
+        background-color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.05);
+    }
+
+    footer {
+        visibility: hidden;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# --------------------------------------------------
+# Hero Section
+# --------------------------------------------------
+st.markdown(
+    """
+    <h1 style='text-align:center;'>🌍 Statistical Machine Translation</h1>
+    <h4 style='text-align:center;'>
+    Translation with BLEU Score Evaluation
+    </h4>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown("---")
+
+# --------------------------------------------------
+# Sidebar
+# --------------------------------------------------
+with st.sidebar:
+    st.header("ℹ️ About This App")
+    st.markdown(
+        """
+        **Features**
+        - IBM Model-1 inspired SMT
+        - Bigram Language Model
+        - Word-level decoding
+        - BLEU score evaluation
+
+        **Evaluation**
+        - Brevity Penalty
+        - 1-gram to 4-gram precision
+
+        **Course**
+        NLP – Assignment 2
+        """
+    )
+    st.divider()
+    st.caption("Built using Python & Streamlit")
+
+# --------------------------------------------------
+# Load & Train Models (Cached)
 # --------------------------------------------------
 @st.cache_data
 def load_models():
@@ -62,63 +142,59 @@ def load_models():
 
     language_model = train_bigram_language_model(tgt_sentences)
 
-    # -------- LOGGING --------
-    print("\n=== SMT TRAINING LOG ===")
-    print(f"Training sentence pairs: {len(src_sentences)}")
-
-    src_vocab = set(word for sent in src_sentences for word in sent)
-    tgt_vocab = set(word for sent in tgt_sentences for word in sent)
-
-    print(f"Source vocabulary size: {len(src_vocab)}")
-    print(f"Target vocabulary size: {len(tgt_vocab)}")
-
-    # Show sample learned translations
-    sample_words = list(translation_model.keys())[:5]
-    print("Sample translation probabilities:")
-    for word in sample_words:
-        print(f"  {word} -> {translation_model[word]}")
-
-    print("=== TRAINING COMPLETE ===\n")
-    # -------------------------
-
     return translation_model, language_model
 
 
 translation_model, language_model = load_models()
 
 # --------------------------------------------------
-# User Input Section
+# Input Section
 # --------------------------------------------------
-st.header("🔤 Input")
+st.markdown("## 🔤 Input Sentences")
 
-source_text = st.text_area(
-    "Enter source sentence:",
-    height=100
-)
+col1, col2 = st.columns(2)
 
-reference_text = st.text_area(
-    "Enter reference translation (for BLEU):",
-    height=100
-)
+with col1:
+    source_text = st.text_area(
+        "Source Sentence",
+        height=150,
+        placeholder="Enter source language sentence here..."
+    )
+
+with col2:
+    reference_text = st.text_area(
+        "Reference Translation (Optional)",
+        height=150,
+        placeholder="Enter reference translation for BLEU score..."
+    )
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 # --------------------------------------------------
 # Translate Button
 # --------------------------------------------------
-if st.button("🚀 Translate"):
+translate_btn = st.button("🚀 Translate & Evaluate", use_container_width=True)
+
+# --------------------------------------------------
+# Translation & Evaluation
+# --------------------------------------------------
+if translate_btn:
     if not source_text.strip():
-        st.warning("Please enter source text.")
+        st.warning("⚠️ Please enter a source sentence.")
     else:
-        # Preprocess source
-        clean_src = clean_text(source_text)
-        src_tokens = tokenize(clean_src)
+        with st.spinner("Translating and evaluating..."):
+            # Preprocess
+            clean_src = clean_text(source_text)
+            src_tokens = tokenize(clean_src)
 
-        # Decode translation
-        translated_tokens = decode_sentence(
-            src_tokens, translation_model, language_model
-        )
-        translated_text = " ".join(translated_tokens)
+            # Decode
+            translated_tokens = decode_sentence(
+                src_tokens, translation_model, language_model
+            )
+            translated_text = " ".join(translated_tokens)
 
-        st.header("📝 SMT Output")
+        # Output
+        st.markdown("## 📝 SMT Output")
         st.success(translated_text)
 
         # BLEU Evaluation
@@ -130,33 +206,33 @@ if st.button("🚀 Translate"):
                 translated_tokens, ref_tokens
             )
 
-            st.header("📊 BLEU Evaluation")
+            st.markdown("## 📊 BLEU Evaluation")
 
-            st.metric(
-                label="BLEU Score",
-                value=f"{bleu_results['bleu']:.4f}"
+            c1, c2, c3 = st.columns(3)
+
+            c1.metric("BLEU Score", f"{bleu_results['bleu']:.4f}")
+            c2.metric("Brevity Penalty", f"{bleu_results['brevity_penalty']:.4f}")
+            c3.metric("Output Length", len(translated_tokens))
+
+            st.markdown("### 📈 N-gram Precision")
+
+            st.dataframe(
+                {
+                    "N-gram": ["1-gram", "2-gram", "3-gram", "4-gram"],
+                    "Precision": [
+                        round(bleu_results["1-gram"], 4),
+                        round(bleu_results["2-gram"], 4),
+                        round(bleu_results["3-gram"], 4),
+                        round(bleu_results["4-gram"], 4),
+                    ],
+                },
+                use_container_width=True
             )
-
-            st.write("**Brevity Penalty:**",
-                     f"{bleu_results['brevity_penalty']:.4f}")
-
-            st.subheader("N-gram Precision Table")
-            st.table({
-                "N-gram": ["1-gram", "2-gram", "3-gram", "4-gram"],
-                "Precision": [
-                    bleu_results["1-gram"],
-                    bleu_results["2-gram"],
-                    bleu_results["3-gram"],
-                    bleu_results["4-gram"],
-                ],
-            })
         else:
-            st.info("Reference translation not provided. BLEU not computed.")
+            st.info("ℹ️ Reference translation not provided. BLEU score not computed.")
 
 # --------------------------------------------------
 # Footer
 # --------------------------------------------------
 st.markdown("---")
-st.markdown(
-    "📌 **NLP Assignment – Statistical Machine Translation with BLEU Evaluation**"
-)
+st.caption("📌 NLP Assignment – Statistical Machine Translation with BLEU Evaluation")
